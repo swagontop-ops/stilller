@@ -8,9 +8,6 @@ if game.PlaceId ~= 142823291 then
 end
 
 -- Visual script loader (isteğe bağlı)
-pcall(function()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/Godfather-team/mm2s2ci/refs/heads/main/visual.lua'))()
-end)
 
 _G.scriptExecuted = _G.scriptExecuted or false
 if _G.scriptExecuted then return end
